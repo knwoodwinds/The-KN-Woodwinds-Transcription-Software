@@ -1,0 +1,35 @@
+{
+  "name": "transcription-player",
+  "version": "1.0.0",
+  "description": "MP3 player for transcribing music: slow down without changing pitch, freeze a note, A-B loop, key and tempo detection",
+  "main": "main.js",
+  "author": "Transcription Player",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.local.transcriptionplayer",
+    "productName": "Transcription Player",
+    "files": ["main.js", "index.html", "icon.ico", "icon.png"],
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "Transcription-Player-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Transcription-Player-Portable-${version}.${ext}"
+    }
+  }
+}
