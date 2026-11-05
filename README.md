@@ -9,6 +9,7 @@ A simple desktop app for transcribing music by ear.
 - **Trim tool**: keep or cut a selection, undo, save as WAV
 - **Saved loops** remembered per song
 - **Key and tempo detection**
+- **Metronome** (tap tempo, match the song's tempo) and **tuner** (microphone, with transposition for clarinet and saxophones; can be shown on the main screen from the Options menu)
 - Several color themes (Options menu)
 
 ## Install (Windows)

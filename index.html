@@ -30,7 +30,7 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:4px 0}
 button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 12px;cursor:pointer}
 button.primary{background:var(--acc);color:var(--accink);border-color:var(--acc);font-weight:600}
 button:disabled{opacity:.4;cursor:default}
-.grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1.1fr;gap:10px}
+.grid{flex:1;min-height:auto;display:grid;grid-template-columns:1fr 1.1fr;gap:10px}
 .col{display:flex;flex-direction:column;gap:10px;min-height:0}
 .col .card{flex:1;display:flex;flex-direction:column;justify-content:center}
 #freezeCard{padding:12px}
@@ -53,7 +53,32 @@ header{position:relative}
 .nrow{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 #name{flex:1;min-width:0;margin-bottom:0}
 #anl{font-variant-numeric:tabular-nums;font-size:14px;white-space:nowrap}
-#wave{width:100%;height:96px;display:block;cursor:crosshair;touch-action:none;border-radius:8px;background:var(--bg);margin:4px 0}
+header{flex-wrap:wrap}#drop{min-width:200px}
+#tools{position:fixed;right:14px;top:64px;z-index:6;width:320px;max-width:calc(100vw - 28px);max-height:calc(100vh - 80px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:0 8px 28px rgba(0,0,0,.3)}
+#tools[hidden]{display:none}
+#tools section{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+#tools section:first-of-type{border-top:0;margin-top:6px;padding-top:0}
+.thead{display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.thead button{padding:2px 9px}
+#mdots{display:flex;gap:8px;margin:10px 0}
+.dot{flex:1;height:14px;border-radius:7px;background:var(--line)}
+.dot.on{background:var(--acc)}
+#tnote{font-size:46px;font-weight:700;text-align:center;line-height:1.1;margin-top:6px}
+#tcents{text-align:center;color:var(--mute);font-size:14px;min-height:20px}
+#tgauge{position:relative;height:14px;border-radius:7px;background:var(--line);margin:10px 0}
+#tgauge b{position:absolute;left:45%;width:10%;top:0;bottom:0;background:var(--mute);opacity:.35;border-radius:7px}
+#tneedle{position:absolute;top:-4px;bottom:-4px;width:4px;margin-left:-2px;left:50%;background:var(--ink);border-radius:2px;transition:left .08s}
+#tgauge.ok #tneedle{background:#22c55e}
+#tools select{font:inherit;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px;width:100%;margin-top:6px}
+main.wide{max-width:1320px}
+.grid.has3{grid-template-columns:1fr 1.1fr 1fr}
+#tunerDock{display:flex;flex-direction:column;justify-content:center;padding:12px 14px}
+#tunerDock[hidden]{display:none}
+#tunerDock section{border:0;margin:0;padding:0}
+#tools #tuneHome section{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+@media (max-width:1150px){.grid.has3{grid-template-columns:1fr 1fr}#tunerDock{grid-column:1/-1}#tunerDock .tmain{display:grid;grid-template-columns:170px 1fr;gap:14px;align-items:center}}
+@media (max-width:700px){.grid.has3{grid-template-columns:1fr}}
+#wave{width:100%;height:clamp(64px,11vh,96px);display:block;cursor:crosshair;touch-action:none;border-radius:8px;background:var(--bg);margin:4px 0}
 kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
 #bar{height:6px;background:var(--line);border-radius:3px;position:relative;margin-top:2px}
 #reg{position:absolute;top:0;bottom:0;background:var(--acc);border-radius:3px;opacity:.7;display:none}
@@ -61,13 +86,14 @@ kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
 </style>
 </head>
 <body>
-<main>
+<main id="app">
 <header>
   <h1>🎧 KN Woodwinds Transcription Player</h1>
   <div id="drop">Drop an MP3 here, or click to choose a file</div>
   <input id="file" type="file" accept="audio/*" hidden>
+  <button id="toolBtn">🎚 Tools</button>
   <button id="optBtn">⚙ Options</button>
-  <div id="opts" hidden><label><span>Theme</span></label><div id="themes"></div></div>
+  <div id="opts" hidden><label><span>Theme</span></label><div id="themes"></div><label style="margin-top:12px"><span>Layout</span></label><button id="dockOpt" class="sw" style="margin-top:6px"></button></div>
 </header>
 
 <div class="card">
@@ -81,7 +107,7 @@ kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
   </div>
 </div>
 
-<div class="grid">
+<div class="grid" id="grid">
   <div class="col">
     <div class="card">
       <label><span>Speed (pitch stays the same)</span><span id="spd">100%</span></label>
@@ -110,8 +136,44 @@ kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
     <div id="loops"></div>
   </div>
   </div>
+  <div class="card" id="tunerDock" hidden></div>
 </div>
 
+<aside id="tools" hidden>
+  <div class="thead"><span id="toolsTitle">Metronome &amp; Tuner</span><button id="toolsX" title="Close">✕</button></div>
+  <section>
+    <label><span>Metronome</span><span id="mbpmv">100 BPM</span></label>
+    <input id="mbpm" type="range" min="20" max="240" value="100">
+    <div class="row" style="margin-top:6px"><button id="mmin">−</button><button id="mplus">+</button><button id="mtap">Tap tempo</button><button id="msong" disabled title="Uses the song tempo, adjusted for the current speed">Match song</button></div>
+    <div class="row" style="margin-top:8px"><span style="font-size:14px;color:var(--mute)">Beats per bar</span>
+      <select id="mbeats" style="width:auto;margin:0"><option>1</option><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>7</option><option>9</option><option>12</option></select></div>
+    <label style="margin-top:8px"><span>Click volume</span></label>
+    <input id="mvol" type="range" min="0" max="100" value="60">
+    <div id="mdots"></div>
+    <button id="mgo" class="primary" style="width:100%">Start metronome</button>
+  </section>
+  <div id="tuneHome"><section id="tunerSec">
+    <label><span>Tuner</span><span id="tref">A = 440 Hz</span></label>
+    <div class="tmain">
+      <div class="tdisp"><div id="tnote">–</div><div id="tcents"></div></div>
+      <div class="tctl">
+        <div id="tgauge"><b></b><i id="tneedle"></i></div>
+    <select id="tinst">
+      <option value="0">Concert pitch (C)</option>
+      <option value="2">B♭ clarinet, trumpet, soprano sax</option>
+      <option value="14">B♭ tenor sax</option>
+      <option value="9">E♭ alto sax</option>
+      <option value="21">E♭ baritone sax</option>
+      <option value="7">F horn, English horn</option>
+    </select>
+        <label style="margin-top:8px"><span>Reference pitch</span></label>
+        <input id="tA" type="range" min="415" max="466" value="440">
+        <button id="tgo" class="primary" style="width:100%;margin-top:8px">Start tuner</button>
+        <p class="hint" id="tmsg">Needs your microphone. Nothing is recorded.</p>
+      </div>
+    </div>
+  </section></div>
+</aside>
 <footer><kbd>Space</kbd> play/pause · <kbd>←</kbd><kbd>→</kbd> ±5s · <kbd>↑</kbd><kbd>↓</kbd> speed · <kbd>F</kbd> freeze · <kbd>A</kbd><kbd>B</kbd> loop points · <kbd>L</kbd> loop on/off</footer>
 </main>
 <script>
@@ -371,6 +433,7 @@ function runAnalysis(whole){
   setTimeout(()=>{
     let k=null,t=null;
     try{k=detectKey(a0,b0);t=detectTempo(a0,b0)}catch(e){}
+    if(t){songBpm=t;$("msong").disabled=false}
     $("anl").textContent=(sel?"Loop: ":"")+(k?"Key "+k:"Key –")+" · "+(t?t+" BPM":"tempo –");
   },30);
 }
@@ -519,19 +582,120 @@ const fz=$("freeze");
 fz.addEventListener("pointerdown",e=>{e.preventDefault();fz.setPointerCapture(e.pointerId);freeze(true)});
 ["pointerup","pointercancel"].forEach(t=>fz.addEventListener(t,()=>freeze(false)));
 document.addEventListener("keydown",e=>{
-  if(e.repeat)return;
+  if(e.repeat||(e.target&&e.target.tagName==="SELECT"))return;
   const k=e.key;
   if(k===" "){e.preventDefault();toggle()}
   else if(k==="f"||k==="F")freeze(true);
   else if(k==="a"||k==="A")setA();
   else if(k==="b"||k==="B")setB();
   else if(k==="l"||k==="L")abToggle();
+  else if(k==="m"||k==="M")mToggle();
   else if(k==="ArrowLeft"){e.preventDefault();seekTo(pos/sr-5)}
   else if(k==="ArrowRight"){e.preventDefault();seekTo(pos/sr+5)}
   else if(k==="ArrowUp"){e.preventDefault();setSpeed(speed*100+5)}
   else if(k==="ArrowDown"){e.preventDefault();setSpeed(speed*100-5)}
 });
 document.addEventListener("keyup",e=>{if(e.key==="f"||e.key==="F")freeze(false)});
+/* metronome */
+let songBpm=null,mOn=false,mBpm=100,mBeats=4,mVol=0.6,mNext=0,mCount=0,mTimer=null,taps=[];
+function toolInd(){$("toolBtn").textContent=(mOn||tOn)?"🎚 Tools ●":"🎚 Tools"}
+function mDots(){const d=$("mdots");d.textContent="";for(let i=0;i<mBeats;i++){const e=document.createElement("span");e.className="dot";d.appendChild(e)}}
+function setBpm(v){mBpm=Math.max(20,Math.min(240,Math.round(v)));$("mbpm").value=mBpm;$("mbpmv").textContent=mBpm+" BPM"}
+function mClick(time,accent){
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.frequency.value=accent?1500:1000;
+  g.gain.setValueAtTime(0,time);
+  g.gain.linearRampToValueAtTime(mVol*(accent?1:0.65),time+0.002);
+  g.gain.exponentialRampToValueAtTime(0.0008,time+0.06);
+  o.connect(g);g.connect(ctx.destination);o.start(time);o.stop(time+0.07);
+}
+function mFlash(b){const d=$("mdots").children[b];if(!d)return;d.classList.add("on");setTimeout(()=>d.classList.remove("on"),90)}
+function mTick(){
+  while(mNext<ctx.currentTime+0.12){
+    const b=mCount%mBeats;mClick(mNext,b===0);
+    setTimeout(()=>mFlash(b),Math.max(0,(mNext-ctx.currentTime)*1000));
+    mNext+=60/mBpm;mCount++;
+  }
+}
+function mUi(){$("mgo").textContent=mOn?"Stop metronome":"Start metronome";toolInd()}
+function mStart(){ensureCtx();ctx.resume();mCount=0;mNext=ctx.currentTime+0.06;mOn=true;mTimer=setInterval(mTick,25);mUi()}
+function mStop(){mOn=false;clearInterval(mTimer);mUi()}
+function mToggle(){mOn?mStop():mStart()}
+function mTap(){
+  const n=performance.now();
+  if(taps.length&&n-taps[taps.length-1]>2000)taps=[];
+  taps.push(n);if(taps.length>6)taps.shift();
+  if(taps.length>=2)setBpm(60000/((taps[taps.length-1]-taps[0])/(taps.length-1)));
+}
+/* tuner: YIN pitch detection on the microphone */
+let tOn=false,tStream=null,tSrc=null,tAn=null,tBuf=null,tTimer=null,tHist=[],tLast=0;
+function yin(buf,rate){
+  let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];
+  if(Math.sqrt(rms/buf.length)<0.006)return null;
+  const half=buf.length>>1,tmin=Math.floor(rate/2000),tmax=Math.min(half-2,Math.floor(rate/45));
+  const d=new Float32Array(tmax+2),cm=new Float32Array(tmax+2);
+  for(let tau=1;tau<=tmax;tau++){let sm=0;for(let i=0;i<half;i++){const x=buf[i]-buf[i+tau];sm+=x*x}d[tau]=sm}
+  let run=0;cm[0]=1;
+  for(let tau=1;tau<=tmax;tau++){run+=d[tau];cm[tau]=run?d[tau]*tau/run:1}
+  let tau=-1;
+  for(let t=Math.max(2,tmin);t<=tmax;t++){if(cm[t]<0.13){while(t+1<=tmax&&cm[t+1]<cm[t])t++;tau=t;break}}
+  if(tau<0)return null;
+  const a=cm[tau-1],b=cm[tau],c=cm[tau+1],den=a-2*b+c;
+  return rate/(den?tau+0.5*(a-c)/den:tau);
+}
+function tReset(){$("tnote").textContent="–";$("tcents").textContent="";$("tneedle").style.left="50%";$("tgauge").classList.remove("ok")}
+async function tStart(){
+  try{
+    ensureCtx();await ctx.resume();
+    tStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    tSrc=ctx.createMediaStreamSource(tStream);tAn=ctx.createAnalyser();tAn.fftSize=4096;tSrc.connect(tAn);
+    tBuf=new Float32Array(tAn.fftSize);tHist=[];tOn=true;tTimer=setInterval(tTick,60);
+    $("tgo").textContent="Stop tuner";$("tmsg").textContent="Listening… play a note.";
+  }catch(e){tStop();$("tmsg").textContent="Could not use the microphone. Allow microphone access for this app or page, then try again."}
+  toolInd();
+}
+function tStop(){
+  clearInterval(tTimer);tOn=false;
+  if(tStream)tStream.getTracks().forEach(t=>t.stop());
+  if(tSrc)tSrc.disconnect();
+  tStream=tSrc=tAn=null;$("tgo").textContent="Start tuner";tReset();toolInd();
+}
+function tTick(){
+  if(!tAn)return;
+  tAn.getFloatTimeDomainData(tBuf);
+  const f=yin(tBuf,ctx.sampleRate),now=performance.now();
+  if(f){tHist.push(f);if(tHist.length>5)tHist.shift();tLast=now}
+  else if(now-tLast>400){tHist=[];tReset();return}
+  if(!tHist.length)return;
+  const fm=[...tHist].sort((x,y)=>x-y)[tHist.length>>1],ref=+$("tA").value;
+  const m=69+12*Math.log2(fm/ref),nr=Math.round(m),cents=Math.round((m-nr)*100),wn=nr+(+$("tinst").value);
+  $("tnote").textContent=PCN[((wn%12)+12)%12]+(Math.floor(wn/12)-1);
+  $("tcents").textContent=fm.toFixed(1)+" Hz · "+(cents>0?"+":"")+cents+"¢ "+(Math.abs(cents)<=5?"in tune":cents>0?"sharp":"flat");
+  $("tneedle").style.left=(50+cents)+"%";$("tgauge").classList.toggle("ok",Math.abs(cents)<=5);
+}
+$("toolBtn").onclick=()=>{$("tools").hidden=!$("tools").hidden};
+$("toolsX").onclick=()=>{$("tools").hidden=true};
+$("mbpm").oninput=e=>setBpm(+e.target.value);
+$("mmin").onclick=()=>setBpm(mBpm-1);$("mplus").onclick=()=>setBpm(mBpm+1);
+$("mtap").onclick=mTap;
+$("msong").onclick=()=>{if(songBpm)setBpm(songBpm*speed)};
+$("mbeats").onchange=e=>{mBeats=+e.target.value;mCount=0;mDots()};
+$("mvol").oninput=e=>{mVol=e.target.value/100};
+$("mgo").onclick=mToggle;
+$("tgo").onclick=()=>{tOn?tStop():tStart()};
+function applyDock(on,save){
+  const sec=$("tunerSec"),dk=$("tunerDock");
+  (on?dk:$("tuneHome")).appendChild(sec);
+  dk.hidden=!on;$("app").classList.toggle("wide",on);$("grid").classList.toggle("has3",on);
+  $("toolsTitle").textContent=on?"Metronome":"Metronome & Tuner";
+  $("dockOpt").textContent=(on?"✓ ":"☐ ")+"Show the tuner on the main screen";
+  if(save)try{localStorage.setItem("tp-dock",on?"1":"0")}catch(e){}
+}
+$("dockOpt").onclick=()=>applyDock($("tunerDock").hidden,true);
+$("tA").oninput=e=>{$("tref").textContent="A = "+e.target.value+" Hz"};
+mDots();
+let dockSaved=false;try{dockSaved=localStorage.getItem("tp-dock")==="1"}catch(e){}
+applyDock(dockSaved,false);
 /* themes: colors are set as CSS variables, so the waveform and everything else follow */
 const THEMES=[
  {id:"auto",name:"Auto (system)"},
