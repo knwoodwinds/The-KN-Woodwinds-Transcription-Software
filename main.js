@@ -5,7 +5,7 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1040, minWidth: 700, minHeight: 660,
     height: 760,
-    title: 'Transcription Player',
+    title: 'KN Woodwinds Transcription Player',
     icon: path.join(__dirname, 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: { backgroundThrottling: false }

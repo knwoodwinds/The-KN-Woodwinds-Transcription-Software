@@ -1,4 +1,4 @@
-# Transcription Player
+# KN Woodwinds Transcription Player
 
 A simple desktop app for transcribing music by ear.
 
@@ -14,7 +14,7 @@ A simple desktop app for transcribing music by ear.
 ## Install (Windows)
 
 1. Open the **Releases** page of this repository (right-hand side of the main page).
-2. Download **Transcription-Player-Setup-x.x.x.exe** and run it.
+2. Download **KN-Woodwinds-Transcription-Player-Setup-x.x.x.exe** and run it.
    (Prefer no install? Download the **Portable** file instead and just double-click it.)
 3. Windows may show a blue "Windows protected your PC" box because the app is not digitally signed.
    Click **More info**, then **Run anyway**.

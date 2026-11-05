@@ -1,9 +1,9 @@
 {
-  "name": "transcription-player",
-  "version": "1.0.0",
-  "description": "MP3 player for transcribing music: slow down without changing pitch, freeze a note, A-B loop, key and tempo detection",
+  "name": "kn-woodwinds-transcription-player",
+  "version": "1.0.2",
+  "description": "KN Woodwinds Transcription Player: slow down music without changing pitch, freeze a note, A-B loop, key and tempo detection",
   "main": "main.js",
-  "author": "Transcription Player",
+  "author": "KN Woodwinds",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
@@ -15,10 +15,18 @@
   },
   "build": {
     "appId": "com.local.transcriptionplayer",
-    "productName": "Transcription Player",
-    "files": ["main.js", "index.html", "icon.ico", "icon.png"],
+    "productName": "KN Woodwinds Transcription Player",
+    "files": [
+      "main.js",
+      "index.html",
+      "icon.ico",
+      "icon.png"
+    ],
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "icon.ico"
     },
     "nsis": {
@@ -26,10 +34,10 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "artifactName": "Transcription-Player-Setup-${version}.${ext}"
+      "artifactName": "KN-Woodwinds-Transcription-Player-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "Transcription-Player-Portable-${version}.${ext}"
+      "artifactName": "KN-Woodwinds-Transcription-Player-Portable-${version}.${ext}"
     }
   }
 }
