@@ -69,7 +69,7 @@ header{flex-wrap:wrap}#drop{min-width:200px}
 #tgauge b{position:absolute;left:45%;width:10%;top:0;bottom:0;background:var(--mute);opacity:.35;border-radius:7px}
 #tneedle{position:absolute;top:-4px;bottom:-4px;width:4px;margin-left:-2px;left:50%;background:var(--ink);border-radius:2px;transition:left .08s}
 #tgauge.ok #tneedle{background:#22c55e}
-#tools select{font:inherit;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px;width:100%;margin-top:6px}
+#tools select,#opts select{font:inherit;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px;width:100%;margin-top:6px}
 main.wide{max-width:1320px}
 .grid.has3{grid-template-columns:1fr 1.1fr 1fr}
 #tunerDock{display:flex;flex-direction:column;justify-content:center;padding:12px 14px}
@@ -78,6 +78,10 @@ main.wide{max-width:1320px}
 #tools #tuneHome section{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 @media (max-width:1150px){.grid.has3{grid-template-columns:1fr 1fr}#tunerDock{grid-column:1/-1}#tunerDock .tmain{display:grid;grid-template-columns:170px 1fr;gap:14px;align-items:center}}
 @media (max-width:700px){.grid.has3{grid-template-columns:1fr}}
+.zoomc{display:flex;gap:6px}.zoomc button{padding:3px 10px;font-size:13px}.time{align-items:center}
+#ovw{width:100%;height:26px;display:none;border-radius:6px;background:var(--bg);margin:2px 0 4px;cursor:pointer;touch-action:none}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:20px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9}
+.krow{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px}.krow span{flex:1}.krow button{padding:4px 8px;min-width:96px;font-size:12px}.krow button.x{min-width:0}.krow button.rec{outline:2px solid var(--acc)}
 #wave{width:100%;height:clamp(64px,11vh,96px);display:block;cursor:crosshair;touch-action:none;border-radius:8px;background:var(--bg);margin:4px 0}
 kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
 #bar{height:6px;background:var(--line);border-radius:3px;position:relative;margin-top:2px}
@@ -93,13 +97,25 @@ kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
   <input id="file" type="file" accept="audio/*" hidden>
   <button id="toolBtn">🎚 Tools</button>
   <button id="optBtn">⚙ Options</button>
-  <div id="opts" hidden><label><span>Theme</span></label><div id="themes"></div><label style="margin-top:12px"><span>Layout</span></label><button id="dockOpt" class="sw" style="margin-top:6px"></button></div>
+  <div id="opts" hidden><label><span>Theme</span></label><div id="themes"></div><label style="margin-top:12px"><span>Layout</span></label><button id="dockOpt" class="sw" style="margin-top:6px"></button>
+    <label style="margin-top:12px"><span>Waveform</span></label>
+    <label><span>Height</span></label>
+    <select id="whSel"><option value="auto">Auto</option><option value="64">Small</option><option value="130">Large</option><option value="200">Extra large</option></select>
+    <label style="margin-top:8px"><span>Max zoom (smallest view)</span><span id="zmv">46 ms</span></label>
+    <input id="zmin" type="range" min="0" max="6" value="2">
+    <label style="margin-top:8px"><span>Zoom speed</span><span id="zsv">1.0×</span></label>
+    <input id="zsp" type="range" min="2" max="30" value="10">
+    <label style="margin-top:12px"><span>Shortcuts (loop &amp; trim)</span></label>
+    <div id="keys"></div>
+    <button id="keysReset" class="sw" style="margin-top:8px">Reset all shortcuts</button>
+  </div>
 </header>
 
 <div class="card">
   <div class="nrow"><div id="name">No file loaded</div><div id="anl"></div><button id="anBtn" disabled style="padding:5px 10px">Analyze song</button></div>
   <canvas id="wave"></canvas>
-  <div class="time"><span id="cur">0:00.0</span><span id="dur">0:00.0</span></div>
+  <canvas id="ovw"></canvas>
+  <div class="time"><span id="cur">0:00.0</span><span class="zoomc"><button id="zout" title="Zoom out (-)">−</button><button id="zin" title="Zoom in (+)">+</button><button id="zfit" title="Show the whole song (0)">Fit</button><button id="zfollow" title="Keep the playhead in view while playing">Follow: on</button></span><span id="dur">0:00.0</span></div>
   <div class="transport">
     <button id="back" disabled>−5s</button>
     <button id="play" class="primary" disabled>Play</button>
@@ -119,10 +135,10 @@ kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
     <div class="card">
       <label><span>Loop &amp; trim</span><span id="abtxt">not set</span></label>
       <div class="row">
-        <button id="setA" disabled>Set A</button><button id="setB" disabled>Set B</button><button id="abTog" disabled>Loop: off</button><button id="abClr" disabled>Clear</button>
+        <button id="setA" disabled>Set A</button><button id="setB" disabled>Set B</button><button id="abTog" disabled>Loop: off</button><button id="abClr" disabled>Clear (C)</button>
       </div>
-      <div class="row" style="margin-top:6px"><button id="cKeep" disabled>Keep selection</button><button id="cCut" disabled>Cut selection</button><button id="cUndo" disabled>Undo</button><button id="cSave" disabled>Save WAV</button></div>
-      <p class="hint">Drag on the waveform to select a passage. It loops automatically.</p>
+      <div class="row" style="margin-top:6px"><button id="cKeep" disabled>Keep selection</button><button id="cCut" disabled>Cut selection (Del)</button><button id="cUndo" disabled>Undo</button><button id="cSave" disabled>Save WAV</button></div>
+      <p class="hint">Drag on the waveform to select. Drag the edges to fine-tune. Wheel zooms, Shift+wheel scrolls. Press Delete to cut the selection.</p>
     </div>
   </div>
   <div class="col">
@@ -139,6 +155,7 @@ kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
   <div class="card" id="tunerDock" hidden></div>
 </div>
 
+<div id="toast"></div>
 <aside id="tools" hidden>
   <div class="thead"><span id="toolsTitle">Metronome &amp; Tuner</span><button id="toolsX" title="Close">✕</button></div>
   <section>
@@ -157,7 +174,7 @@ kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
     <div class="tmain">
       <div class="tdisp"><div id="tnote">–</div><div id="tcents"></div></div>
       <div class="tctl">
-        <div id="tgauge"><b></b><i id="tneedle"></i></div>
+        <div id="tgauge"><b id="tzone"></b><i id="tneedle"></i></div>
     <select id="tinst">
       <option value="0">Concert pitch (C)</option>
       <option value="2">B♭ clarinet, trumpet, soprano sax</option>
@@ -168,13 +185,15 @@ kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
     </select>
         <label style="margin-top:8px"><span>Reference pitch</span></label>
         <input id="tA" type="range" min="415" max="466" value="440">
+        <label style="margin-top:8px"><span>Counts as in tune within</span><span id="ttolv">±5 cents</span></label>
+        <input id="ttol" type="range" min="1" max="25" value="5">
         <button id="tgo" class="primary" style="width:100%;margin-top:8px">Start tuner</button>
         <p class="hint" id="tmsg">Needs your microphone. Nothing is recorded.</p>
       </div>
     </div>
   </section></div>
 </aside>
-<footer><kbd>Space</kbd> play/pause · <kbd>←</kbd><kbd>→</kbd> ±5s · <kbd>↑</kbd><kbd>↓</kbd> speed · <kbd>F</kbd> freeze · <kbd>A</kbd><kbd>B</kbd> loop points · <kbd>L</kbd> loop on/off</footer>
+<footer id="foot"></footer>
 </main>
 <script>
 const $=id=>document.getElementById(id);
@@ -270,36 +289,144 @@ function process(e){
     qc-=m;
   }
 }
-/* waveform */
-const cv=$("wave"),g2=cv.getContext("2d");
+/* waveform: zoom, scroll, and a multi-resolution peak table so it stays fast on long songs */
+const cv=$("wave"),g2=cv.getContext("2d"),ovw=$("ovw"),ov2=ovw.getContext("2d");
+let pyr=[],viewStart=0,viewLen=1,follow=true,followPause=0,pkLo=0,pkHi=0;
 function buildPeaks(){
-  const W=2400,len=L.length,step=len/W;peaks=new Float32Array(W*2);pkMax=.05;
-  for(let b=0;b<W;b++){
-    let mn=1,mx=-1;const s0=Math.floor(b*step),e=Math.min(len,Math.floor((b+1)*step)),sk=Math.max(1,Math.floor((e-s0)/64));
-    for(let i=s0;i<e;i+=sk){const v=(L[i]+R[i])*0.5;if(v<mn)mn=v;if(v>mx)mx=v}
-    if(mn>mx){mn=0;mx=0}
-    peaks[2*b]=mn;peaks[2*b+1]=mx;pkMax=Math.max(pkMax,-mn,mx);
+  const len=L.length,b0=64;let n=Math.ceil(len/b0);
+  let mn=new Float32Array(n),mx=new Float32Array(n);pkMax=.05;
+  for(let i=0;i<n;i++){
+    let lo=1,hi=-1;const e=Math.min(len,(i+1)*b0);
+    for(let j=i*b0;j<e;j++){const v=(L[j]+R[j])*0.5;if(v<lo)lo=v;if(v>hi)hi=v}
+    if(lo>hi){lo=0;hi=0}
+    mn[i]=lo;mx[i]=hi;if(-lo>pkMax)pkMax=-lo;if(hi>pkMax)pkMax=hi;
   }
+  pyr=[{b:b0,mn,mx}];let b=b0;
+  while(n>64){
+    const n2=Math.ceil(n/2),a2=new Float32Array(n2),c2=new Float32Array(n2);
+    for(let i=0;i<n2;i++){
+      const j=2*i,k=Math.min(n-1,j+1);
+      a2[i]=Math.min(mn[j],mn[k]);c2[i]=Math.max(mx[j],mx[k]);
+    }
+    mn=a2;mx=c2;n=n2;b*=2;pyr.push({b,mn,mx});
+  }
+  zoomFit();
+}
+function peakAt(s0,s1){
+  s0=Math.max(0,Math.floor(s0));s1=Math.min(L.length,Math.max(s0+1,Math.ceil(s1)));
+  let lo=1,hi=-1;const spp=s1-s0;
+  if(spp<=64){for(let i=s0;i<s1;i++){const v=(L[i]+R[i])*0.5;if(v<lo)lo=v;if(v>hi)hi=v}}
+  else{
+    let lv=0;while(lv+1<pyr.length&&pyr[lv+1].b<=spp)lv++;
+    const P=pyr[lv],a=Math.floor(s0/P.b),e=Math.min(P.mn.length,Math.ceil(s1/P.b));
+    for(let i=a;i<e;i++){if(P.mn[i]<lo)lo=P.mn[i];if(P.mx[i]>hi)hi=P.mx[i]}
+  }
+  if(lo>hi){lo=0;hi=0}
+  pkLo=lo;pkHi=hi;
+}
+const clampStart=v=>Math.max(0,Math.min(L.length-viewLen,v));
+const xToSample=x=>viewStart+x/cv.clientWidth*viewLen;
+const sampleToX=sm=>(sm-viewStart)/viewLen*cv.clientWidth;
+function zoomFit(){viewStart=0;viewLen=L.length}
+function zoomBy(f,anchor){
+  if(!buf)return;
+  const len=L.length,nl=Math.max(Math.min(len,cfg.zoomMin),Math.min(len,viewLen/f));
+  if(anchor==null){const ph=curPos();anchor=(ph>=viewStart&&ph<=viewStart+viewLen)?ph:viewStart+viewLen/2}
+  const fr=(anchor-viewStart)/viewLen;viewLen=nl;viewStart=clampStart(anchor-fr*nl);
+}
+function ensureVisible(sm){if(buf&&(sm<viewStart||sm>viewStart+viewLen))viewStart=clampStart(sm-viewLen*0.2)}
+function sizeTo(c){
+  const d=window.devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;
+  if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}
+  return d;
 }
 function drawWave(){
-  const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;
-  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr)}
+  const dpr=sizeTo(cv),w=cv.clientWidth,h=cv.clientHeight,mid=h/2;
   g2.setTransform(dpr,0,0,dpr,0,0);g2.clearRect(0,0,w,h);
   const cs=getComputedStyle(document.documentElement),acc=cs.getPropertyValue("--acc"),dim=cs.getPropertyValue("--line"),ink=cs.getPropertyValue("--ink");
-  const mid=h/2;
-  if(!buf||!peaks){g2.fillStyle=dim;g2.fillRect(0,mid-1,w,2);return}
-  const T=L.length,cp=curPos()/T,amp=mid*0.92/pkMax,n=peaks.length/2;
-  let r1=null,r2=null;
-  if(drag&&drag.moved){r1=Math.min(drag.x0,drag.x);r2=Math.max(drag.x0,drag.x)}
-  else if(A!==null){r1=A/T*w;r2=Math.max(r1+2,(B===null?A:B)/T*w)}
-  if(r1!==null){g2.globalAlpha=.2;g2.fillStyle=acc;g2.fillRect(r1,0,r2-r1,h);g2.globalAlpha=1}
-  for(let x=0;x<w;x++){
-    const b=Math.min(n-1,Math.floor(x/w*n)),lo=peaks[2*b],hi=peaks[2*b+1];
-    g2.fillStyle=x/w<cp?acc:dim;
-    g2.fillRect(x,mid-hi*amp,1,Math.max(1,(hi-lo)*amp));
+  if(!buf||!pyr.length){g2.fillStyle=dim;g2.fillRect(0,mid-1,w,2);ovw.style.display="none";return}
+  const T=L.length,now=performance.now();
+  /* follow the playhead, and scroll when dragging near the edges */
+  if(follow&&playing&&!drag&&viewLen<T&&now>followPause){
+    const ph=curPos();if(ph>viewStart+viewLen*0.95||ph<viewStart)viewStart=clampStart(ph-viewLen*0.1);
   }
-  g2.fillStyle=ink;g2.fillRect(cp*w-1,0,2,h);
+  if(drag&&(drag.moved||drag.mode!=="new")&&viewLen<T){
+    const sp=viewLen*0.012;if(drag.x<24)viewStart=clampStart(viewStart-sp);else if(drag.x>w-24)viewStart=clampStart(viewStart+sp);
+  }
+  if(drag&&drag.mode==="edgeA"){A=Math.max(0,Math.min(xToSample(drag.x),(B===null?T:B)-100))}
+  if(drag&&drag.mode==="edgeB"){B=Math.min(T,Math.max(xToSample(drag.x),(A===null?0:A)+100))}
+  const spp=viewLen/w,amp=mid*0.92/pkMax,cpx=sampleToX(curPos());
+  let ra=null,rb=null;
+  if(drag&&drag.mode==="new"&&drag.moved){ra=Math.min(drag.s0,xToSample(drag.x));rb=Math.max(drag.s0,xToSample(drag.x))}
+  else if(A!==null){ra=A;rb=(B===null?A:B)}
+  if(ra!==null){
+    const x1=sampleToX(ra),x2=Math.max(x1+2,sampleToX(rb));
+    g2.globalAlpha=.2;g2.fillStyle=acc;g2.fillRect(x1,0,x2-x1,h);g2.globalAlpha=1;
+    g2.fillStyle=acc;g2.fillRect(x1-1,0,2,h);if(B!==null||(drag&&drag.moved))g2.fillRect(x2-1,0,2,h);
+  }
+  for(let x=0;x<w;x++){
+    peakAt(viewStart+x*spp,viewStart+(x+1)*spp);
+    g2.fillStyle=x<cpx?acc:dim;
+    g2.fillRect(x,mid-pkHi*amp,1,Math.max(1,(pkHi-pkLo)*amp));
+  }
+  if(cpx>=-2&&cpx<=w+2){g2.fillStyle=ink;g2.fillRect(cpx-1,0,2,h)}
+  /* overview strip (only when zoomed in) */
+  const zoomed=viewLen<T-1;ovw.style.display=zoomed?"block":"none";
+  if(!zoomed)return;
+  const d2=sizeTo(ovw),ow=ovw.clientWidth,oh=ovw.clientHeight,om=oh/2,os=T/ow,oa=om*0.9/pkMax;
+  ov2.setTransform(d2,0,0,d2,0,0);ov2.clearRect(0,0,ow,oh);
+  ov2.fillStyle=dim;
+  for(let x=0;x<ow;x++){peakAt(x*os,(x+1)*os);ov2.fillRect(x,om-pkHi*oa,1,Math.max(1,(pkHi-pkLo)*oa))}
+  const vx=viewStart/T*ow,vw=Math.max(4,viewLen/T*ow);
+  ov2.globalAlpha=.18;ov2.fillStyle=acc;ov2.fillRect(vx,0,vw,oh);ov2.globalAlpha=1;
+  ov2.strokeStyle=acc;ov2.lineWidth=2;ov2.strokeRect(vx+1,1,vw-2,oh-2);
+  ov2.fillStyle=ink;ov2.fillRect(curPos()/T*ow-1,0,2,oh);
 }
+/* mouse and touch on the waveform: click to seek, drag to select, drag an edge to fine-tune, wheel to zoom */
+const cx=e=>Math.min(cv.clientWidth,Math.max(0,e.clientX-cv.getBoundingClientRect().left));
+cv.addEventListener("pointerdown",e=>{
+  if(!buf)return;cv.setPointerCapture(e.pointerId);
+  const x=cx(e);let mode="new";
+  if(A!==null&&B!==null){
+    if(Math.abs(x-sampleToX(A))<=7)mode="edgeA";else if(Math.abs(x-sampleToX(B))<=7)mode="edgeB";
+  }
+  drag={x0:x,x,moved:mode!=="new",mode,s0:xToSample(x)};
+});
+cv.addEventListener("pointermove",e=>{
+  const x=cx(e);
+  if(!drag){
+    const near=buf&&A!==null&&B!==null&&(Math.abs(x-sampleToX(A))<=7||Math.abs(x-sampleToX(B))<=7);
+    cv.style.cursor=near?"col-resize":"crosshair";return;
+  }
+  drag.x=x;if(Math.abs(x-drag.x0)>4)drag.moved=true;
+});
+cv.addEventListener("pointerup",e=>{
+  if(!drag)return;drag.x=cx(e);const d=drag;drag=null;
+  const spp=viewLen/cv.clientWidth;
+  if(d.mode==="new"){
+    const s1=xToSample(d.x),a=Math.min(d.s0,s1),b=Math.max(d.s0,s1);
+    if(d.moved&&b-a>Math.max(300,spp*3)){A=Math.max(0,a);B=Math.min(L.length,b);abOn=true;abUi()}
+    else seekTo(d.s0/sr);
+  }else{
+    if(A!==null&&B!==null&&A>B){const t=A;A=B;B=t}
+    abUi();
+  }
+});
+cv.addEventListener("pointercancel",()=>{drag=null});
+cv.addEventListener("wheel",e=>{
+  if(!buf)return;e.preventDefault();
+  if(e.shiftKey||Math.abs(e.deltaX)>Math.abs(e.deltaY)){
+    viewStart=clampStart(viewStart+(e.deltaX||e.deltaY)/cv.clientWidth*viewLen);followPause=performance.now()+3000;
+  }else zoomBy(Math.exp(-e.deltaY*0.003*cfg.zoomSpeed),xToSample(cx(e)));
+},{passive:false});
+/* overview strip: click or drag to move the view */
+let odrag=false;
+const ovGo=e=>{viewStart=clampStart((e.clientX-ovw.getBoundingClientRect().left)/ovw.clientWidth*L.length-viewLen/2);followPause=performance.now()+3000};
+ovw.addEventListener("pointerdown",e=>{odrag=true;ovw.setPointerCapture(e.pointerId);ovGo(e)});
+ovw.addEventListener("pointermove",e=>{if(odrag)ovGo(e)});
+ovw.addEventListener("pointerup",()=>{odrag=false});
+$("zin").onclick=()=>zoomBy(zStep());$("zout").onclick=()=>zoomBy(1/zStep());$("zfit").onclick=()=>{if(buf)zoomFit()};
+$("zfollow").onclick=()=>{follow=!follow;$("zfollow").textContent="Follow: "+(follow?"on":"off")};
 /* key + tempo detection */
 const KN=8192;let kre=new Float64Array(KN),kim=new Float64Array(KN),kwin=null,krev,kcos,ksin;
 function kInit(){
@@ -482,20 +609,34 @@ function loadLoop(l){
 }
 setInterval(saveState,2000);
 window.addEventListener("pagehide",saveState);
-function afterEdit(at){
+function afterEdit(at,keepView){
+  const kv=keepView?viewLen:0;
   setupGrain();buildPeaks();A=B=null;abOn=false;loopOn=false;lg=0;
+  if(kv){viewLen=Math.min(kv,L.length);viewStart=clampStart(at-viewLen/2)}
   pos=at+N/2;$("dur").textContent=fmt(L.length/sr);abUi();
 }
 function pushUndo(){undoStack.push([L,R]);if(undoStack.length>10)undoStack.shift()}
+function snapZero(i){
+  let best=i,bv=1e9;const lo=Math.max(1,i-220),hi=Math.min(L.length-2,i+220);
+  for(let k=lo;k<=hi;k++){const v=Math.abs((L[k]+R[k])*0.5);if(v<bv){bv=v;best=k}}
+  return best;
+}
+function toast(t){const e=$("toast");e.textContent=t;e.style.opacity=1;clearTimeout(toast.h);toast.h=setTimeout(()=>{e.style.opacity=0},2600)}
 function cutKeep(){
-  if(A===null||B===null)return;const a=Math.round(A),b=Math.round(B);if(b-a<2000)return;
+  if(A===null||B===null)return;
+  const a=snapZero(Math.round(A)),b=snapZero(Math.round(B));if(b-a<2000)return;
   const nl=L.slice(a,b),nr=R.slice(a,b);pushUndo();L=nl;R=nr;afterEdit(0);
+  toast("Kept "+fmt((b-a)/sr)+". Ctrl+Z to undo.");
 }
 function cutDelete(){
-  if(A===null||B===null)return;const a=Math.round(A),b=Math.round(B);if(b-a>=L.length-2000)return;
+  if(A===null||B===null)return;
+  const a=snapZero(Math.round(A)),b=snapZero(Math.round(B));
+  if(b-a<1)return;
+  if(b-a>=L.length-2000){toast("That would remove the whole song.");return}
   const nl=new Float32Array(L.length-(b-a)),nr=new Float32Array(nl.length);
   nl.set(L.subarray(0,a));nl.set(L.subarray(b),a);nr.set(R.subarray(0,a));nr.set(R.subarray(b),a);
-  pushUndo();L=nl;R=nr;afterEdit(a);
+  pushUndo();L=nl;R=nr;afterEdit(a,true);
+  toast("Cut "+fmt((b-a)/sr)+". Ctrl+Z to undo.");
 }
 function undoEdit(){const u=undoStack.pop();if(!u)return;L=u[0];R=u[1];afterEdit(0)}
 function saveWav(){
@@ -538,7 +679,7 @@ function toggle(){
   if(!playing&&pos-N/2>=L.length-1)pos=N/2;
   playing=!playing;ui();
 }
-function seekTo(t){if(!buf)return;pos=Math.min(Math.max(0,t*sr),L.length)+N/2;resetSynth()}
+function seekTo(t){if(!buf)return;pos=Math.min(Math.max(0,t*sr),L.length)+N/2;resetSynth();ensureVisible(t*sr)}
 function setSpeed(p){p=Math.min(150,Math.max(10,p));speed=p/100;$("speed").value=p;$("spd").textContent=p+"%"}
 function freeze(on){
   if(!buf||frozen===on)return;
@@ -560,22 +701,14 @@ $("drop").ondragleave=()=>$("drop").classList.remove("over");
 $("drop").ondrop=e=>{e.preventDefault();$("drop").classList.remove("over");e.dataTransfer.files[0]&&load(e.dataTransfer.files[0])};
 $("play").onclick=toggle;
 $("setA").onclick=setA;$("setB").onclick=setB;$("abTog").onclick=abToggle;
-$("abClr").onclick=()=>{A=B=null;abOn=false;abUi()};
+$("abClr").onclick=abClear;
 $("lSave").onclick=saveLoop;
 $("anBtn").onclick=()=>runAnalysis(false);
 $("fzlen").oninput=e=>{fzMs=+e.target.value;$("fzv").textContent=fzMs+" ms"};
 $("cKeep").onclick=cutKeep;$("cCut").onclick=cutDelete;$("cUndo").onclick=undoEdit;$("cSave").onclick=saveWav;
 $("back").onclick=()=>seekTo(pos/sr-5);
 $("fwd").onclick=()=>seekTo(pos/sr+5);
-const cx=e=>Math.min(cv.clientWidth,Math.max(0,e.clientX-cv.getBoundingClientRect().left));
-cv.addEventListener("pointerdown",e=>{if(!buf)return;cv.setPointerCapture(e.pointerId);drag={x0:cx(e),x:cx(e),moved:false}});
-cv.addEventListener("pointermove",e=>{if(!drag)return;drag.x=cx(e);if(Math.abs(drag.x-drag.x0)>4)drag.moved=true});
-cv.addEventListener("pointerup",e=>{
-  if(!drag)return;drag.x=cx(e);const w=cv.clientWidth,T=L.length,d=drag;drag=null;
-  if(d.moved){A=Math.min(d.x0,d.x)/w*T;B=Math.max(d.x0,d.x)/w*T;abOn=true;abUi()}
-  else seekTo(d.x0/w*(T/sr));
-});
-cv.addEventListener("pointercancel",()=>{drag=null});
+
 $("speed").oninput=e=>setSpeed(+e.target.value);
 document.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>setSpeed(+b.dataset.s));
 const fz=$("freeze");
@@ -584,12 +717,14 @@ fz.addEventListener("pointerdown",e=>{e.preventDefault();fz.setPointerCapture(e.
 document.addEventListener("keydown",e=>{
   if(e.repeat||(e.target&&e.target.tagName==="SELECT"))return;
   const k=e.key;
+  const cmb=comboOf(e),aid=cmb&&keymap[cmb];
+  if(aid){e.preventDefault();ACTIONS.find(a=>a.id===aid).run();return}
   if(k===" "){e.preventDefault();toggle()}
   else if(k==="f"||k==="F")freeze(true);
-  else if(k==="a"||k==="A")setA();
-  else if(k==="b"||k==="B")setB();
-  else if(k==="l"||k==="L")abToggle();
   else if(k==="m"||k==="M")mToggle();
+  else if(k==="="||k==="+")zoomBy(zStep());
+  else if(k==="-"||k==="_")zoomBy(1/zStep());
+  else if(k==="0")zoomFit();
   else if(k==="ArrowLeft"){e.preventDefault();seekTo(pos/sr-5)}
   else if(k==="ArrowRight"){e.preventDefault();seekTo(pos/sr+5)}
   else if(k==="ArrowUp"){e.preventDefault();setSpeed(speed*100+5)}
@@ -670,8 +805,8 @@ function tTick(){
   const fm=[...tHist].sort((x,y)=>x-y)[tHist.length>>1],ref=+$("tA").value;
   const m=69+12*Math.log2(fm/ref),nr=Math.round(m),cents=Math.round((m-nr)*100),wn=nr+(+$("tinst").value);
   $("tnote").textContent=PCN[((wn%12)+12)%12]+(Math.floor(wn/12)-1);
-  $("tcents").textContent=fm.toFixed(1)+" Hz · "+(cents>0?"+":"")+cents+"¢ "+(Math.abs(cents)<=5?"in tune":cents>0?"sharp":"flat");
-  $("tneedle").style.left=(50+cents)+"%";$("tgauge").classList.toggle("ok",Math.abs(cents)<=5);
+  $("tcents").textContent=fm.toFixed(1)+" Hz · "+(cents>0?"+":"")+cents+"¢ "+(Math.abs(cents)<=cfg.tol?"in tune":cents>0?"sharp":"flat");
+  $("tneedle").style.left=(50+cents)+"%";$("tgauge").classList.toggle("ok",Math.abs(cents)<=cfg.tol);
 }
 $("toolBtn").onclick=()=>{$("tools").hidden=!$("tools").hidden};
 $("toolsX").onclick=()=>{$("tools").hidden=true};
@@ -692,10 +827,103 @@ function applyDock(on,save){
   if(save)try{localStorage.setItem("tp-dock",on?"1":"0")}catch(e){}
 }
 $("dockOpt").onclick=()=>applyDock($("tunerDock").hidden,true);
-$("tA").oninput=e=>{$("tref").textContent="A = "+e.target.value+" Hz"};
+$("tA").oninput=e=>{$("tref").textContent="A = "+e.target.value+" Hz";cfg.refA=+e.target.value;saveCfg()};
+$("tinst").onchange=e=>{cfg.inst=e.target.value;saveCfg()};
+$("ttol").oninput=e=>{setTol(+e.target.value);saveCfg()};
 mDots();
 let dockSaved=false;try{dockSaved=localStorage.getItem("tp-dock")==="1"}catch(e){}
 applyDock(dockSaved,false);
+/* settings (remembered) */
+const ZM=[8192,4096,2048,1024,512,256,128];
+let cfg={tol:5,inst:"0",refA:440,zoomMin:2048,zoomSpeed:1,wh:"auto",keys:{}};
+function saveCfg(){try{localStorage.setItem("tp-settings",JSON.stringify(cfg))}catch(e){}}
+const zStep=()=>Math.pow(1.6,cfg.zoomSpeed);
+function abClear(){if(A===null&&B===null)return;A=B=null;abOn=false;abUi();toast("Loop cleared")}
+function setTol(v){cfg.tol=v;$("ttol").value=v;$("ttolv").textContent="±"+v+" cents";$("tzone").style.left=(50-v)+"%";$("tzone").style.width=(2*v)+"%"}
+function applyWH(){cv.style.height=cfg.wh==="auto"?"":cfg.wh+"px"}
+function showZoom(){$("zmv").textContent=Math.round(cfg.zoomMin/sr*1000)+" ms";$("zsv").textContent=cfg.zoomSpeed.toFixed(1)+"×"}
+function initCfg(){
+  try{Object.assign(cfg,JSON.parse(localStorage.getItem("tp-settings"))||{})}catch(e){}
+  $("tinst").value=cfg.inst;$("tA").value=cfg.refA;$("tref").textContent="A = "+cfg.refA+" Hz";setTol(cfg.tol);
+  $("whSel").value=cfg.wh;applyWH();
+  $("zmin").value=Math.max(0,ZM.indexOf(cfg.zoomMin));$("zsp").value=Math.round(cfg.zoomSpeed*10);showZoom();keysInit();
+}
+/* customizable shortcuts for loop and trim */
+const ACTIONS=[
+ {id:"setA",label:"Set loop start",def:["A"],run:()=>setA(),btn:["setA","Set A"]},
+ {id:"setB",label:"Set loop end",def:["B"],run:()=>setB(),btn:["setB","Set B"]},
+ {id:"loopT",label:"Loop on/off",def:["L"],run:()=>abToggle()},
+ {id:"clear",label:"Clear loop",def:["C"],run:()=>abClear(),btn:["abClr","Clear"]},
+ {id:"keep",label:"Keep selection",def:[],run:()=>cutKeep(),btn:["cKeep","Keep selection"]},
+ {id:"cut",label:"Cut selection",def:["Delete","Backspace"],run:()=>cutDelete(),btn:["cCut","Cut selection"]},
+ {id:"undo",label:"Undo",def:["Ctrl+Z"],run:()=>undoEdit(),btn:["cUndo","Undo"]},
+ {id:"saveLoop",label:"Save current loop",def:[],run:()=>saveLoop(),btn:["lSave","Save current loop"]},
+ {id:"saveWav",label:"Save WAV",def:[],run:()=>saveWav(),btn:["cSave","Save WAV"]}
+];
+const RESERVED=["Space","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","F","M","=","+","-","_","0","Escape","Tab","Enter"];
+let keymap={},recId=null;
+const bindings=a=>(cfg.keys&&cfg.keys[a.id]!==undefined)?cfg.keys[a.id]:a.def;
+function comboOf(e){
+  const k=e.key;if(!k||["Control","Shift","Alt","Meta"].includes(k))return null;
+  const n=k===" "?"Space":(k.length===1?k.toUpperCase():k);let m="";
+  if(e.ctrlKey||e.metaKey)m+="Ctrl+";
+  if(e.altKey)m+="Alt+";
+  if(e.shiftKey&&(k.length>1||/[a-z]/i.test(k)))m+="Shift+";
+  return m+n;
+}
+const shortName=c=>c.replace("Delete","Del").replace("Backspace","Bksp").replace("Arrow","");
+function buildKeymap(){keymap={};ACTIONS.forEach(a=>bindings(a).forEach(c=>{keymap[c]=a.id}))}
+function renderFooter(){
+  const f=$("foot");f.textContent="";
+  const parts=[{k:["Space"],t:"play/pause"},{k:["←","→"],t:"±5s"},{k:["↑","↓"],t:"speed"},{k:["F"],t:"freeze"}];
+  [["setA","loop start"],["setB","loop end"],["loopT","loop on/off"],["clear","clear loop"],["cut","cut"],["undo","undo"]].forEach(([id,t])=>{
+    const b=bindings(ACTIONS.find(x=>x.id===id))[0];if(b)parts.push({k:[shortName(b)],t});
+  });
+  parts.forEach((p,i)=>{
+    if(i)f.append(" · ");
+    p.k.forEach(x=>{const e=document.createElement("kbd");e.textContent=x;f.appendChild(e)});
+    f.append(" "+p.t);
+  });
+}
+function refreshLabels(){
+  ACTIONS.forEach(a=>{if(!a.btn)return;const b=bindings(a)[0];$(a.btn[0]).textContent=a.btn[1]+(b?" ("+shortName(b)+")":"")});
+  renderFooter();
+}
+function setBind(id,list){cfg.keys=cfg.keys||{};cfg.keys[id]=list;saveCfg();buildKeymap();renderKeys();refreshLabels()}
+function renderKeys(){
+  const box=$("keys");box.textContent="";
+  ACTIONS.forEach(a=>{
+    const row=document.createElement("div");row.className="krow";
+    const lb=document.createElement("span");lb.textContent=a.label;
+    const kb=document.createElement("button");kb.className=recId===a.id?"rec":"";
+    kb.textContent=recId===a.id?"Press a key…":(bindings(a).map(shortName).join(" / ")||"none");
+    kb.onclick=()=>{recId=recId===a.id?null:a.id;renderKeys()};
+    const x=document.createElement("button");x.className="x";x.textContent="✕";x.title="Remove shortcut";x.onclick=()=>{recId=null;setBind(a.id,[])};
+    row.append(lb,kb,x);box.appendChild(row);
+  });
+}
+function recKey(e){
+  if(!recId)return;
+  e.preventDefault();e.stopPropagation();
+  if(e.key==="Escape"){recId=null;renderKeys();return}
+  const c=comboOf(e);if(!c)return;
+  if(RESERVED.includes(c)){toast(c+" is reserved. Pick another key.");return}
+  const id=recId,moved=[];
+  ACTIONS.forEach(o=>{if(o.id!==id&&bindings(o).includes(c)){cfg.keys[o.id]=bindings(o).filter(x=>x!==c);moved.push(o.label)}});
+  recId=null;setBind(id,[c]);
+  if(moved.length)toast(shortName(c)+" moved from "+moved.join(", "));
+}
+function keysInit(){
+  if(!cfg.keys)cfg.keys={};
+  buildKeymap();renderKeys();refreshLabels();
+}
+document.addEventListener("keydown",recKey,true);
+document.addEventListener("keyup",e=>{if(recId&&e.key===" ")e.preventDefault()},true);
+$("keysReset").onclick=()=>{cfg.keys={};recId=null;saveCfg();buildKeymap();renderKeys();refreshLabels();toast("Shortcuts reset")};
+$("whSel").onchange=e=>{cfg.wh=e.target.value;applyWH();saveCfg()};
+$("zmin").oninput=e=>{cfg.zoomMin=ZM[+e.target.value];showZoom();if(buf&&viewLen<cfg.zoomMin)zoomBy(1);saveCfg()};
+$("zsp").oninput=e=>{cfg.zoomSpeed=+e.target.value/10;showZoom();saveCfg()};
+initCfg();
 /* themes: colors are set as CSS variables, so the waveform and everything else follow */
 const THEMES=[
  {id:"auto",name:"Auto (system)"},
@@ -729,7 +957,7 @@ function applyTheme(id){
   renderThemes(t.id);
 }
 $("optBtn").onclick=e=>{e.stopPropagation();$("opts").hidden=!$("opts").hidden};
-document.addEventListener("click",e=>{if(!$("opts").contains(e.target))$("opts").hidden=true});
+document.addEventListener("click",e=>{if(!$("opts").contains(e.target)){$("opts").hidden=true;if(recId){recId=null;renderKeys()}}});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")$("opts").hidden=true});
 let savedTheme="auto";try{savedTheme=localStorage.getItem("tp-theme")||"auto"}catch(e){}
 applyTheme(savedTheme);
