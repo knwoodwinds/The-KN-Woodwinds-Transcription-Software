@@ -82,6 +82,26 @@ main.wide{max-width:1320px}
 #ovw{width:100%;height:26px;display:none;border-radius:6px;background:var(--bg);margin:2px 0 4px;cursor:pointer;touch-action:none}
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:20px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9}
 .krow{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px}.krow span{flex:1}.krow button{padding:4px 8px;min-width:96px;font-size:12px}.krow button.x{min-width:0}.krow button.rec{outline:2px solid var(--acc)}
+@media (pointer:coarse){
+  button{min-height:44px}
+  .zoomc button{min-height:38px}
+  #freeze{min-height:120px}
+  footer{display:none}
+}
+@media (max-width:700px){.grid .col:nth-child(2){order:-1}}
+#tdial{display:none;width:100%;max-width:260px;margin:4px auto 0}
+.tdialmode #tdial{display:block}
+.tdialmode #tgauge{display:none}
+#tdial .dtrack{fill:none;stroke:var(--line);stroke-width:10}
+#tdial .zone{fill:none;stroke:var(--mute);stroke-width:10;opacity:.55}
+#tdial.ok .zone{stroke:#22c55e;opacity:1}
+#tdial .needle{stroke:var(--ink);stroke-width:3;stroke-linecap:round}
+#tdial.ok .needle{stroke:#22c55e}
+#tdial .hub{fill:var(--ink)}
+#tdial .tick{stroke:var(--mute);stroke-width:1}
+#tdial .tick0{stroke:var(--ink);stroke-width:2}
+#tdial text{fill:var(--mute);font-size:9px;text-anchor:middle}
+#tdial .flat,#tdial .sharp{font-size:15px;fill:var(--ink)}
 #wave{width:100%;height:clamp(64px,11vh,96px);display:block;cursor:crosshair;touch-action:none;border-radius:8px;background:var(--bg);margin:4px 0}
 kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
 #bar{height:6px;background:var(--line);border-radius:3px;position:relative;margin-top:2px}
@@ -98,6 +118,8 @@ kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
   <button id="toolBtn">🎚 Tools</button>
   <button id="optBtn">⚙ Options</button>
   <div id="opts" hidden><label><span>Theme</span></label><div id="themes"></div><label style="margin-top:12px"><span>Layout</span></label><button id="dockOpt" class="sw" style="margin-top:6px"></button>
+    <label style="margin-top:12px"><span>Tuner display</span></label>
+    <select id="tdSel"><option value="bar">Bar</option><option value="dial">Dial (like a clip-on tuner)</option></select>
     <label style="margin-top:12px"><span>Waveform</span></label>
     <label><span>Height</span></label>
     <select id="whSel"><option value="auto">Auto</option><option value="64">Small</option><option value="130">Large</option><option value="200">Extra large</option></select>
@@ -172,7 +194,7 @@ kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
   <div id="tuneHome"><section id="tunerSec">
     <label><span>Tuner</span><span id="tref">A = 440 Hz</span></label>
     <div class="tmain">
-      <div class="tdisp"><div id="tnote">–</div><div id="tcents"></div></div>
+      <div class="tdisp"><svg id="tdial" viewBox="0 0 200 112"></svg><div id="tnote">–</div><div id="tcents"></div></div>
       <div class="tctl">
         <div id="tgauge"><b id="tzone"></b><i id="tneedle"></i></div>
     <select id="tinst">
@@ -207,7 +229,7 @@ function ensureCtx(){
   if(ctx)return;
   ctx=new (window.AudioContext||window.webkitAudioContext)();
   sr=ctx.sampleRate;
-  node=ctx.createScriptProcessor(2048,0,2);
+  node=ctx.createScriptProcessor(/Android/i.test(navigator.userAgent)?4096:2048,0,2);
   node.onaudioprocess=process;
   node.connect(ctx.destination);
 }
@@ -382,10 +404,22 @@ function drawWave(){
   ov2.strokeStyle=acc;ov2.lineWidth=2;ov2.strokeRect(vx+1,1,vw-2,oh-2);
   ov2.fillStyle=ink;ov2.fillRect(curPos()/T*ow-1,0,2,oh);
 }
+const ptrs=new Map();let pinchPrev=null;
+function pinchMove(){
+  const v=[...ptrs.values()],d=Math.abs(v[0]-v[1])||1,c=(v[0]+v[1])/2;
+  if(pinchPrev){
+    zoomBy(d/pinchPrev.d,xToSample(pinchPrev.c));
+    viewStart=clampStart(viewStart-(c-pinchPrev.c)/cv.clientWidth*viewLen);
+    followPause=performance.now()+3000;
+  }
+  pinchPrev={d,c};
+}
 /* mouse and touch on the waveform: click to seek, drag to select, drag an edge to fine-tune, wheel to zoom */
 const cx=e=>Math.min(cv.clientWidth,Math.max(0,e.clientX-cv.getBoundingClientRect().left));
 cv.addEventListener("pointerdown",e=>{
   if(!buf)return;cv.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId,cx(e));
+  if(ptrs.size>=2){drag=null;pinchPrev=null;return}
   const x=cx(e);let mode="new";
   if(A!==null&&B!==null){
     if(Math.abs(x-sampleToX(A))<=7)mode="edgeA";else if(Math.abs(x-sampleToX(B))<=7)mode="edgeB";
@@ -394,6 +428,7 @@ cv.addEventListener("pointerdown",e=>{
 });
 cv.addEventListener("pointermove",e=>{
   const x=cx(e);
+  if(ptrs.has(e.pointerId)){ptrs.set(e.pointerId,x);if(ptrs.size===2){pinchMove();return}}
   if(!drag){
     const near=buf&&A!==null&&B!==null&&(Math.abs(x-sampleToX(A))<=7||Math.abs(x-sampleToX(B))<=7);
     cv.style.cursor=near?"col-resize":"crosshair";return;
@@ -401,6 +436,7 @@ cv.addEventListener("pointermove",e=>{
   drag.x=x;if(Math.abs(x-drag.x0)>4)drag.moved=true;
 });
 cv.addEventListener("pointerup",e=>{
+  ptrs.delete(e.pointerId);pinchPrev=null;
   if(!drag)return;drag.x=cx(e);const d=drag;drag=null;
   const spp=viewLen/cv.clientWidth;
   if(d.mode==="new"){
@@ -412,7 +448,7 @@ cv.addEventListener("pointerup",e=>{
     abUi();
   }
 });
-cv.addEventListener("pointercancel",()=>{drag=null});
+cv.addEventListener("pointercancel",e=>{ptrs.delete(e.pointerId);pinchPrev=null;drag=null});
 cv.addEventListener("wheel",e=>{
   if(!buf)return;e.preventDefault();
   if(e.shiftKey||Math.abs(e.deltaX)>Math.abs(e.deltaY)){
@@ -639,6 +675,14 @@ function cutDelete(){
   toast("Cut "+fmt((b-a)/sr)+". Ctrl+Z to undo.");
 }
 function undoEdit(){const u=undoStack.pop();if(!u)return;L=u[0];R=u[1];afterEdit(0)}
+async function nativeSave(ab){
+  try{
+    const u8=new Uint8Array(ab);let bin="";
+    for(let i=0;i<u8.length;i+=0x8000)bin+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));
+    const name=fileName+".wav",r=await Capacitor.Plugins.Filesystem.writeFile({path:name,data:btoa(bin),directory:"CACHE"});
+    await Capacitor.Plugins.Share.share({title:name,url:r.uri,dialogTitle:"Save or share"});
+  }catch(e){toast("Could not save the file. "+((e&&e.message)||""))}
+}
 function saveWav(){
   if(!buf)return;
   const n=L.length,ab=new ArrayBuffer(44+n*4),v=new DataView(ab);
@@ -647,6 +691,8 @@ function saveWav(){
   v.setUint32(24,sr,true);v.setUint32(28,sr*4,true);v.setUint16(32,4,true);v.setUint16(34,16,true);ws(36,"data");v.setUint32(40,n*4,true);
   let o=44;
   for(let i=0;i<n;i++){for(const ch of [L,R]){const x=Math.max(-1,Math.min(1,ch[i]));v.setInt16(o,x<0?x*32768:x*32767,true);o+=2}}
+  const cap=window.Capacitor;
+  if(cap&&cap.isNativePlatform&&cap.isNativePlatform()){nativeSave(ab);return}
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([ab],{type:"audio/wav"}));a.download=fileName+".wav";a.click();
 }
 function abUi(){
@@ -778,7 +824,7 @@ function yin(buf,rate){
   const a=cm[tau-1],b=cm[tau],c=cm[tau+1],den=a-2*b+c;
   return rate/(den?tau+0.5*(a-c)/den:tau);
 }
-function tReset(){$("tnote").textContent="–";$("tcents").textContent="";$("tneedle").style.left="50%";$("tgauge").classList.remove("ok")}
+function tReset(){$("tnote").textContent="–";$("tcents").textContent="";$("tneedle").style.left="50%";$("tgauge").classList.remove("ok");$("tneedleD").style.transform="rotate(0deg)";$("tdial").classList.remove("ok")}
 async function tStart(){
   try{
     ensureCtx();await ctx.resume();
@@ -807,6 +853,7 @@ function tTick(){
   $("tnote").textContent=PCN[((wn%12)+12)%12]+(Math.floor(wn/12)-1);
   $("tcents").textContent=fm.toFixed(1)+" Hz · "+(cents>0?"+":"")+cents+"¢ "+(Math.abs(cents)<=cfg.tol?"in tune":cents>0?"sharp":"flat");
   $("tneedle").style.left=(50+cents)+"%";$("tgauge").classList.toggle("ok",Math.abs(cents)<=cfg.tol);
+  $("tneedleD").style.transform="rotate("+(Math.max(-50,Math.min(50,cents))*1.2)+"deg)";$("tdial").classList.toggle("ok",Math.abs(cents)<=cfg.tol);
 }
 $("toolBtn").onclick=()=>{$("tools").hidden=!$("tools").hidden};
 $("toolsX").onclick=()=>{$("tools").hidden=true};
@@ -835,18 +882,38 @@ let dockSaved=false;try{dockSaved=localStorage.getItem("tp-dock")==="1"}catch(e)
 applyDock(dockSaved,false);
 /* settings (remembered) */
 const ZM=[8192,4096,2048,1024,512,256,128];
-let cfg={tol:5,inst:"0",refA:440,zoomMin:2048,zoomSpeed:1,wh:"auto",keys:{}};
+let cfg={tol:5,inst:"0",refA:440,zoomMin:2048,zoomSpeed:1,wh:"auto",keys:{},tdial:"bar"};
 function saveCfg(){try{localStorage.setItem("tp-settings",JSON.stringify(cfg))}catch(e){}}
 const zStep=()=>Math.pow(1.6,cfg.zoomSpeed);
 function abClear(){if(A===null&&B===null)return;A=B=null;abOn=false;abUi();toast("Loop cleared")}
-function setTol(v){cfg.tol=v;$("ttol").value=v;$("ttolv").textContent="±"+v+" cents";$("tzone").style.left=(50-v)+"%";$("tzone").style.width=(2*v)+"%"}
+function arcD(r,a0,a1){
+  const p=a=>[100+r*Math.sin(a*Math.PI/180),100-r*Math.cos(a*Math.PI/180)],[x0,y0]=p(a0),[x1,y1]=p(a1);
+  return "M"+x0.toFixed(2)+" "+y0.toFixed(2)+" A"+r+" "+r+" 0 "+(Math.abs(a1-a0)>180?1:0)+" 1 "+x1.toFixed(2)+" "+y1.toFixed(2);
+}
+function buildDial(){
+  let t='<path class="dtrack" d="'+arcD(78,-60,60)+'"/><path id="tdzone" class="zone" d=""/>';
+  for(let c=-50;c<=50;c+=5){
+    const a=c*1.2*Math.PI/180,len=c===0?14:(c%10===0?9:5),r0=88,r1=88+len;
+    t+='<line class="'+(c===0?'tick0':'tick')+'" x1="'+(100+r0*Math.sin(a)).toFixed(2)+'" y1="'+(100-r0*Math.cos(a)).toFixed(2)+'" x2="'+(100+r1*Math.sin(a)).toFixed(2)+'" y2="'+(100-r1*Math.cos(a)).toFixed(2)+'"/>';
+  }
+  [[-50,"−50"],[-25,"−25"],[0,"0"],[25,"+25"],[50,"+50"]].forEach(([c,l])=>{
+    const a=c*1.2*Math.PI/180;t+='<text x="'+(100+62*Math.sin(a)).toFixed(2)+'" y="'+(100-62*Math.cos(a)+3).toFixed(2)+'">'+l+'</text>';
+  });
+  t+='<text class="flat" x="14" y="40">♭</text><text class="sharp" x="186" y="40">♯</text>';
+  t+='<g id="tneedleD" style="transform-box:view-box;transform-origin:100px 100px;transition:transform .15s ease-out"><line class="needle" x1="100" y1="100" x2="100" y2="30"/><circle class="hub" cx="100" cy="100" r="6"/></g>';
+  $("tdial").innerHTML=t;
+}
+function applyTdial(){$("tunerSec").classList.toggle("tdialmode",cfg.tdial==="dial")}
+function setTol(v){$("tdzone").setAttribute("d",arcD(78,-v*1.2,v*1.2));cfg.tol=v;$("ttol").value=v;$("ttolv").textContent="±"+v+" cents";$("tzone").style.left=(50-v)+"%";$("tzone").style.width=(2*v)+"%"}
 function applyWH(){cv.style.height=cfg.wh==="auto"?"":cfg.wh+"px"}
 function showZoom(){$("zmv").textContent=Math.round(cfg.zoomMin/sr*1000)+" ms";$("zsv").textContent=cfg.zoomSpeed.toFixed(1)+"×"}
 function initCfg(){
+  buildDial();
   try{Object.assign(cfg,JSON.parse(localStorage.getItem("tp-settings"))||{})}catch(e){}
   $("tinst").value=cfg.inst;$("tA").value=cfg.refA;$("tref").textContent="A = "+cfg.refA+" Hz";setTol(cfg.tol);
   $("whSel").value=cfg.wh;applyWH();
   $("zmin").value=Math.max(0,ZM.indexOf(cfg.zoomMin));$("zsp").value=Math.round(cfg.zoomSpeed*10);showZoom();keysInit();
+  $("tdSel").value=cfg.tdial;applyTdial();
 }
 /* customizable shortcuts for loop and trim */
 const ACTIONS=[
@@ -920,10 +987,23 @@ function keysInit(){
 document.addEventListener("keydown",recKey,true);
 document.addEventListener("keyup",e=>{if(recId&&e.key===" ")e.preventDefault()},true);
 $("keysReset").onclick=()=>{cfg.keys={};recId=null;saveCfg();buildKeymap();renderKeys();refreshLabels();toast("Shortcuts reset")};
+$("tdSel").onchange=e=>{cfg.tdial=e.target.value;applyTdial();saveCfg()};
 $("whSel").onchange=e=>{cfg.wh=e.target.value;applyWH();saveCfg()};
 $("zmin").oninput=e=>{cfg.zoomMin=ZM[+e.target.value];showZoom();if(buf&&viewLen<cfg.zoomMin)zoomBy(1);saveCfg()};
 $("zsp").oninput=e=>{cfg.zoomSpeed=+e.target.value/10;showZoom();saveCfg()};
 initCfg();
+/* phones: keep the screen awake while playing, and touch wording */
+let wl=null,wlBusy=false;
+setInterval(async()=>{
+  if(wlBusy||!navigator.wakeLock)return;
+  const want=playing||mOn||tOn;wlBusy=true;
+  try{
+    if(want&&!wl){wl=await navigator.wakeLock.request("screen");wl.addEventListener("release",()=>{wl=null})}
+    else if(!want&&wl){await wl.release();wl=null}
+  }catch(e){}
+  wlBusy=false;
+},1500);
+if(window.matchMedia&&window.matchMedia("(pointer:coarse)").matches)$("drop").textContent="Tap to choose a song";
 /* themes: colors are set as CSS variables, so the waveform and everything else follow */
 const THEMES=[
  {id:"auto",name:"Auto (system)"},

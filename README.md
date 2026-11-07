@@ -13,6 +13,7 @@ A simple desktop app for transcribing music by ear.
 - **Metronome** (tap tempo, match the song's tempo) and **tuner** (microphone, with transposition for clarinet and saxophones; can be shown on the main screen from the Options menu)
 - Adjustable tuner tolerance, zoom depth, zoom speed and waveform height (tuner and Options menu), remembered between sessions
 - Customizable keyboard shortcuts for loop and trim (Options menu)
+- Tuner display: bar or dial, like a clip-on tuner (Options menu)
 - Several color themes (Options menu)
 
 ## Install (Windows)
@@ -30,3 +31,8 @@ Space play/pause, F (hold) freeze, A / B set loop points, L loop on/off, arrow k
 ## Build it yourself
 
 Install Node.js, then in this folder run `npm install` and `npm run build`. The installers appear in `dist/`.
+
+## Android
+
+Download **KN-Woodwinds-Transcription-Player.apk** from the Releases page on your phone, open it, and allow installs from your browser when Android asks. The app works offline.
+The Android version is built automatically from the same code. See `.github/workflows/android.yml`.

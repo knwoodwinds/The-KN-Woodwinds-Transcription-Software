@@ -1,6 +1,6 @@
 {
   "name": "kn-woodwinds-transcription-player",
-  "version": "1.0.8",
+  "version": "1.0.10",
   "description": "KN Woodwinds Transcription Player: slow down music without changing pitch, freeze a note, A-B loop, key and tempo detection",
   "main": "main.js",
   "author": "KN Woodwinds",
