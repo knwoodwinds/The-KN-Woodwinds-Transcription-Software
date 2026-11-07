@@ -27,7 +27,7 @@ Run the file you downloaded. Windows may show a blue "Windows protected your PC"
 - **Waveform view**: click to jump anywhere, zoom with the mouse wheel or pinch, scroll with Shift+wheel or two fingers, drag selection edges to fine-tune
 - **Trim tool**: keep or cut a selection (Delete key), undo, save as WAV
 - **Saved loops** remembered per song
-- **Key and tempo detection**
+- **Tempo detection**
 - **Metronome** (tap tempo, match the song's tempo) and **tuner** (microphone, bar or dial display, transposition for clarinet and saxophones)
 - Customizable keyboard shortcuts, tuner range, zoom and waveform size
 - Several color themes (Options menu)

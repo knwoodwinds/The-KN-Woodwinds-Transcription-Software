@@ -134,7 +134,7 @@ kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
 </header>
 
 <div class="card">
-  <div class="nrow"><div id="name">No file loaded</div><div id="anl"></div><button id="anBtn" disabled style="padding:5px 10px">Analyze song</button></div>
+  <div class="nrow"><div id="name">No file loaded</div><div id="anl"></div><button id="anBtn" disabled style="padding:5px 10px">Find tempo</button></div>
   <canvas id="wave"></canvas>
   <canvas id="ovw"></canvas>
   <div class="time"><span id="cur">0:00.0</span><span class="zoomc"><button id="zout" title="Zoom out (-)">−</button><button id="zin" title="Zoom in (+)">+</button><button id="zfit" title="Show the whole song (0)">Fit</button><button id="zfollow" title="Keep the playhead in view while playing">Follow: on</button></span><span id="dur">0:00.0</span></div>
@@ -463,85 +463,8 @@ ovw.addEventListener("pointermove",e=>{if(odrag)ovGo(e)});
 ovw.addEventListener("pointerup",()=>{odrag=false});
 $("zin").onclick=()=>zoomBy(zStep());$("zout").onclick=()=>zoomBy(1/zStep());$("zfit").onclick=()=>{if(buf)zoomFit()};
 $("zfollow").onclick=()=>{follow=!follow;$("zfollow").textContent="Follow: "+(follow?"on":"off")};
-/* key + tempo detection */
-const KN=8192;let kre=new Float64Array(KN),kim=new Float64Array(KN),kwin=null,krev,kcos,ksin;
-function kInit(){
-  kwin=new Float64Array(KN);krev=new Uint32Array(KN);kcos=new Float64Array(KN/2);ksin=new Float64Array(KN/2);
-  const bits=Math.log2(KN);
-  for(let i=0;i<KN;i++){kwin[i]=0.5-0.5*Math.cos(2*Math.PI*i/KN);let r=0;for(let b=0;b<bits;b++)if((i>>b)&1)r|=1<<(bits-1-b);krev[i]=r}
-  for(let i=0;i<KN/2;i++){kcos[i]=Math.cos(2*Math.PI*i/KN);ksin[i]=-Math.sin(2*Math.PI*i/KN)}
-}
-function kfft(){
-  for(let i=0;i<KN;i++){const j=krev[i];if(j>i){let t=kre[i];kre[i]=kre[j];kre[j]=t;t=kim[i];kim[i]=kim[j];kim[j]=t}}
-  for(let len=2;len<=KN;len<<=1){
-    const half=len>>1,step=KN/len;
-    for(let i=0;i<KN;i+=len)for(let k=0;k<half;k++){
-      const c=kcos[k*step],sn=ksin[k*step],x=i+k,y=x+half,tr=kre[y]*c-kim[y]*sn,ti=kre[y]*sn+kim[y]*c;
-      kre[y]=kre[x]-tr;kim[y]=kim[x]-ti;kre[x]+=tr;kim[x]+=ti;
-    }
-  }
-}
+/* tempo detection */
 const PCN=["C","C♯","D","E♭","E","F","F♯","G","A♭","A","B♭","B"];
-const KMAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88],KMIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
-function pearson(a,b){
-  let ma=0,mb=0;for(let i=0;i<12;i++){ma+=a[i];mb+=b[i]}ma/=12;mb/=12;
-  let d=0,x=0,y=0;for(let i=0;i<12;i++){const u=a[i]-ma,v=b[i]-mb;d+=u*v;x+=u*u;y+=v*v}
-  return d/Math.sqrt(x*y+1e-12);
-}
-const TMAJ=[5,2,3.5,2,4.5,4,2,4.5,2,3.5,1.5,4],TMIN=[5,2,3.5,4.5,2,4,2,4.5,3.5,2,1.5,4];
-let kopt={beta:0,hm:0.4,hd:0.1};
-/* key: find the real spectral peaks, correct for off-pitch tuning, build a pitch-class profile (bass counts extra), match to major/minor templates */
-function detectKey(a0,b0){
-  if(!kwin)kInit();
-  const len=b0-a0;if(len<KN)return null;
-  const frames=Math.min(400,Math.floor((len-KN)/(sr*0.2))+1),hop=frames>1?(len-KN)/(frames-1):0;
-  const binHz=sr/KN,lo=Math.max(2,Math.floor(55/binHz)),hi=Math.min(KN/2-2,Math.floor(4000/binHz));
-  const mag=new Float64Array(KN/2+2),fs=[],ws=[];
-  for(let fr=0;fr<frames;fr++){
-    const st=a0+Math.floor(fr*hop);
-    for(let i=0;i<KN;i++){kre[i]=(L[st+i]+R[st+i])*0.5*kwin[i];kim[i]=0}
-    kfft();
-    let mx=0;
-    for(let k=lo-1;k<=hi+1;k++){mag[k]=Math.hypot(kre[k],kim[k]);if(k>=lo&&k<=hi&&mag[k]>mx)mx=mag[k]}
-    if(mx<1)continue;
-    const pf=[],pw=[];
-    for(let k=lo;k<=hi;k++){
-      if(mag[k]>mag[k-1]&&mag[k]>=mag[k+1]&&mag[k]>0.05*mx){
-        const x=Math.log(mag[k-1]+1e-9),y=Math.log(mag[k]),z=Math.log(mag[k+1]+1e-9),d=x-2*y+z;
-        pf.push((k+(d<0?0.5*(x-z)/d:0))*binHz);pw.push(Math.sqrt(mag[k]/mx));
-      }
-    }
-    /* overtones (2x, 3x, 4x a lower note) are not new notes: turn them down */
-    for(let i=0;i<pf.length;i++){
-      let w=pw[i];
-      for(let h=2;h<=4&&w===pw[i];h++){
-        const tg=pf[i]/h;if(tg<55)break;
-        for(let j=0;j<i;j++)if(Math.abs(Math.log2(pf[j]/tg))<0.025&&pw[j]>kopt.hm*pw[i]){w=pw[i]*kopt.hd;break}
-      }
-      fs.push(pf[i]);ws.push(w);
-    }
-  }
-  if(fs.length<20)return null;
-  let sx=0,sy=0;
-  for(let i=0;i<fs.length;i++){if(fs[i]<110)continue;const m=69+12*Math.log2(fs[i]/440),fr=m-Math.round(m);sx+=ws[i]*Math.cos(2*Math.PI*fr);sy+=ws[i]*Math.sin(2*Math.PI*fr)}
-  const tune=Math.atan2(sy,sx)/(2*Math.PI);
-  const full=new Float64Array(12),bass=new Float64Array(12);let tf=0,tb=0;
-  for(let i=0;i<fs.length;i++){
-    const m=69+12*Math.log2(fs[i]/440)-tune,pc=((Math.round(m)%12)+12)%12;
-    full[pc]+=ws[i];tf+=ws[i];
-    if(fs[i]<260){bass[pc]+=ws[i];tb+=ws[i]}
-  }
-  const chroma=Array.from({length:12},(_,i)=>full[i]/tf+(tb>0?kopt.beta*bass[i]/tb:0));
-  let best=-9,bt=0,bm=false;
-  for(let t=0;t<12;t++){
-    const r=Array.from({length:12},(_,i)=>chroma[(t+i)%12]);
-    const a=pearson(r,KMAJ)+pearson(r,TMAJ),b=pearson(r,KMIN)+pearson(r,TMIN);
-    if(a>best){best=a;bt=t;bm=false}
-    if(b>best){best=b;bt=t;bm=true}
-  }
-  const rel=bm?PCN[(bt+3)%12]+" major":PCN[(bt+9)%12]+" minor";
-  return PCN[bt]+(bm?" minor":" major")+" (rel. "+rel+")";
-}
 function mkFFT(n){
   const bits=Math.log2(n),rev=new Uint32Array(n),cs=new Float64Array(n/2),sn=new Float64Array(n/2);
   for(let i=0;i<n;i++){let r=0;for(let b=0;b<bits;b++)if((i>>b)&1)r|=1<<(bits-1-b);rev[i]=r}
@@ -594,10 +517,10 @@ function runAnalysis(whole){
   const sel=!whole&&A!==null&&B!==null,a0=sel?Math.round(A):0,b0=sel?Math.round(B):L.length;
   $("anl").textContent="Analyzing…";
   setTimeout(()=>{
-    let k=null,t=null;
-    try{k=detectKey(a0,b0);t=detectTempo(a0,b0)}catch(e){}
+    let t=null;
+    try{t=detectTempo(a0,b0)}catch(e){}
     if(t){songBpm=t;$("msong").disabled=false}
-    $("anl").textContent=(sel?"Loop: ":"")+(k?"Key "+k:"Key –")+" · "+(t?t+" BPM":"tempo –");
+    $("anl").textContent=(sel?"Loop: ":"Song: ")+(t?t+" BPM":"tempo not found");
   },30);
 }
 /* remembered per song (matched by file name + size), stored on this computer */
@@ -700,7 +623,7 @@ function abUi(){
   $("abtxt").textContent=A===null?"not set":fmt(A/sr)+" → "+(B===null?"…":fmt(B/sr));
   $("abTog").textContent="Loop: "+(abOn?"on":"off");
   $("abTog").disabled=!ok;
-  $("lSave").disabled=!ok;$("anBtn").textContent=ok?"Analyze loop":"Analyze song";renderLoops();$("cKeep").disabled=!ok;$("cCut").disabled=!ok;$("cUndo").disabled=!undoStack.length;
+  $("lSave").disabled=!ok;$("anBtn").textContent=ok?"Tempo of loop":"Find tempo";renderLoops();$("cKeep").disabled=!ok;$("cCut").disabled=!ok;$("cUndo").disabled=!undoStack.length;
 }
 function setA(){if(!buf)return;A=curPos();if(B!==null&&B<=A){B=null;abOn=false}abUi()}
 function setB(){if(!buf||A===null)return;const t=curPos();if(t<=A+sr*0.05)return;B=t;abOn=true;abUi()}
